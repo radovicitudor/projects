@@ -1,0 +1,65 @@
+---
+- hosts: Wordpress_VMs
+  become: yes
+  tasks:
+    - name: Installs Nginx web server
+      apt: pkg=nginx state=latest update_cache=yes
+
+    - name: PyMysl
+      pip:
+        name: pymysql
+        state: present 
+        
+    - name: Install Mysql
+      apt: 
+        pkg: 
+        - mysql-server
+
+    - name: Install PHP
+      apt: 
+        pkg:
+        - php-mysql
+        - php7.4-fpm
+        - php-gd
+        - php-common
+        - php-mbstring
+        - php-curl
+        - php-cli
+        - unzip
+
+    - name: Download Wordpress
+      unarchive:
+        src: https://wordpress.org/latest.zip
+        dest: /var/www/html/
+        remote_src: yes
+
+    - name: Upload default wordpress.conf
+      copy: 
+        src: /Users/radovicitudor/Desktop/exam/wordpress.conf
+        dest: /etc/nginx/sites-enabled/wordpress.conf
+        mode: '0644'
+
+    - name: Remove Ngix Default 
+      file: 
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+
+    - name: Login Credentials Root
+      mysql_user:
+        login_user: root
+        login_password: root
+        name: wordpress_dbuser
+        password: wpi_dbuser
+        priv: '*.*:ALL,GRANT'
+
+- hosts: Loadbalancer
+  become: yes
+  tasks:
+    - name: Install Nginx Loadbalancer
+      apt: pkg=nginx state=latest update_cache=yes
+
+    - name: Upload default wordpress.conf
+      copy: 
+        src: /Users/radovicitudor/Desktop/exam/nginx_loadbalancer 
+        dest: /etc/nginx/sites-enabled/default
+        mode: '0644'

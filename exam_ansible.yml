@@ -1,0 +1,39 @@
+- name: Create VMs
+  hosts: m
+  gather_facts: False
+  vars:
+    keypair: tudorradovici
+    instance_type: t2.micro
+    security_group: tudor_load_balancer
+    image:  ami-0c960b947cbb2dd16
+    region: eu-central-1
+    assign_public_ip: yes
+    exact_count: 1
+    
+  tasks:
+    - name: Launch instance
+      ec2:
+         key_name: "{{ keypair }}"
+         group: "{{ security_group }}"
+         instance_type: "{{ instance_type }}"
+         image: "{{ image }}"
+         wait: true
+         region: "{{ region }}"
+         vpc_subnet_id: subnet-c4d4d4bc
+         assign_public_ip: yes
+      register: ec2
+
+    - name: Add new instance to host group
+      add_host:
+        hostname: "{{ item.public_ip }}"
+        groupname: launched
+      loop: "{{ ec2.instances }}"
+
+    - name: Wait for SSH to come up
+      delegate_to: "{{ item.public_dns_name }}"
+      wait_for_connection:
+        delay: 60
+        timeout: 180
+      loop: "{{ ec2.instances }}"
+
+

@@ -1,0 +1,52 @@
+upstream wordpress{
+        ip_hash;
+        server 172.31.39.93 fail_timeout=10s;
+        server 172.31.39.155 fail_timeout=10s;
+}
+
+add_header X-Upstream $upstream_addr always;
+add_header "server" $upstream_http_wpi;
+server {
+  listen 80;
+  server_name ansible.radovicitudor.com;
+
+    location / {
+       proxy_set_header  Host ansible.radovicitudor.com;
+       proxy_set_header X-Forwarded-Proto $scheme;
+       proxy_pass_request_headers   on;
+       proxy_pass http://wordpress;
+    }
+
+  # return 301 https://ansible.radovicitudor.com$request_uri;
+}
+
+server {
+
+    listen 443 ssl  http2;
+    listen [::]:443 ssl http2;
+
+    server_name ansible.radovicitudor.com;
+
+    ssl_certificate /etc/ssl/certs/fullchain.pem;
+    ssl_certificate_key /etc/ssl/certs/privkey.pem;
+    ssl_dhparam /etc/ssl/certs/dhparams.pem;
+
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:MozSSL:10m;  # about 40000 sessions
+    ssl_session_tickets off;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+
+
+    location / {
+       proxy_set_header  Host ansible.radovicitudor.com;
+       proxy_set_header HTTP_WL_PROXY_SSL true;
+       proxy_pass_request_headers   on;
+       proxy_pass http://wordpress;
+    }
+  }
+
+
+
+ 

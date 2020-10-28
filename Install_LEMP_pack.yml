@@ -1,0 +1,163 @@
+- hosts: Wordpress_VMs
+  become: true
+  handlers:
+    - name: Restart Nginx
+      service:
+        name: nginx
+        state: restarted
+  tasks:
+    - name: Update & upgrade OS
+      apt:
+        update_cache: yes
+        upgrade: yes
+    - name: Install LEMP Packages
+      apt:
+        pkg: 
+        - nginx
+        - php-fpm
+        - php-mysql
+        - unzip
+        - openssl
+ 
+ # Download WP
+
+    - name: Download Wordpress
+      unarchive:
+        src: https://wordpress.org/latest.zip
+        dest: /var/www/html/
+        remote_src: yes
+
+    - name: Change file ownership, group and permissions
+      file:
+        path: /var/www/html/wordpress
+        owner: www-data
+        group: www-data
+        recurse: yes
+        mode: '755'
+        
+ #   - name: Insert WP fix
+  #    lineinfile:
+   #     path: /var/www/html/wordpress/wp-config.php
+    #    line: if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strpos($_SERVER['HTTP_X_FORWARDED_PROTO'], 'https') !== false){$_SERVER['HTTPS']='on';}
+    #
+    #- name: Insert WP fix site_url
+     # lineinfile:
+      #  path: /var/www/html/wordpress/wp-config.php
+       # line: define( 'WP_SITEURL', $scheme . '://' . $_SERVER['HTTP_HOST'] );
+        
+    #- name: Insert WP fix home_url
+     # lineinfile:
+      #  path: /var/www/html/wordpress/wp-config.php
+       # line: define( 'WP_HOME', $scheme . '://' . $_SERVER['HTTP_HOST'] );
+
+
+
+# Nginx Configuration
+    - name: Sets Nginx conf file
+      template:
+        src: /Users/radovicitudor/Desktop/exam/wordpress.conf
+        dest: /etc/nginx/sites-enabled/
+    
+    - name: Removes "default" site
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+      notify: Restart Nginx
+
+# Mysql config & Wordpress DB
+    - name: Removes all anonymous user accounts
+      mysql_user:
+        name: ''
+        host_all: yes
+        state: absent
+        login_user: root   
+        login_password: root
+
+    - name: Removes the MySQL test database
+      mysql_db: 
+        name: test 
+        state: absent
+        login_user: root
+        login_password: root
+
+    - name: Create database for WP
+      mysql_db:
+        login_user: root
+        login_password: root
+        name: wordpress
+        state: present 
+
+    - name: Configure user for WordpressDB
+      mysql_user:
+        login_user: root
+        login_password: root
+        name: wpuser
+        password: wpuser
+        priv: 'wordpress.*:ALL'  
+  
+- hosts: Loadbalancer
+  become: true
+  handlers:
+    - name: Restart Nginx
+      service:
+        name: nginx
+        state: restarted
+  tasks:
+    - name: Update & upgrade OS
+      apt:
+        update_cache: yes
+        upgrade: yes
+    - name: Install Nginx
+      apt:
+        pkg: 
+        - nginx
+
+    - name: Sets Nginx LB file
+      copy:
+        src: /Users/radovicitudor/Desktop/exam/nginx_loadbalancer
+        dest: /etc/nginx/sites-enabled/default
+      notify: Restart Nginx
+    
+    
+    - name: Create ssl directory
+      file: path=/etc/ssl/certs state=directory mode=0775
+  
+     
+    - name: Generate dhparam
+      openssl_dhparam:
+        path: /etc/ssl/certs/dhparams.pem
+        size: 2048
+
+    - name: Copy priv.key
+      copy:
+        src: /Users/radovicitudor/Desktop/exam/ssl/privkey.pem
+        dest: /etc/ssl/certs/privkey.pem
+      notify: Restart Nginx
+
+    - name: Copy cert.pem
+      copy:
+        src: /Users/radovicitudor/Desktop/exam/ssl/fullchain.pem
+        dest: /etc/ssl/certs/fullchain.pem
+      notify: Restart Nginx
+
+   # - name: Generate Private key
+ #     openssl_privatekey: path=/etc/ssl/certs/ansibleradovicitudor.key 
+#
+ #   - name: Generate CSR
+  #    openssl_csr: 
+   #     path: /etc/ssl/certs/ansibleradovicitudor.csr
+    #    privatekey_path: /etc/ssl/certs/ansibleradovicitudor.key 
+     #   common_name: ansible.radovicitudor.com 
+      #  country_name: RO
+       # email_address: radovicitudor@gmail.com
+        #organization_name: radovicitudor.co
+#
+ #   - name: Generate a self signed certificate
+  #    openssl_certificate:
+   #     csr_path: /etc/ssl/certs/ansibleradovicitudor.csr
+    #    path: /etc/ssl/certs/ansibleradovicitudor.crt
+     #   privatekey_path: /etc/ssl/certs/ansibleradovicitudor.key
+      #  provider: selfsigned
+       # valid_in: 1209600
+        #notify: Restart Nginx
+
