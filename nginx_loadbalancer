@@ -1,7 +1,7 @@
 upstream wordpress{
         ip_hash;
-        server 172.31.39.93 fail_timeout=10s;
-        server 172.31.39.155 fail_timeout=10s;
+        server {{ansible_hostname}} fail_timeout=10s;
+        server {{ansible_hostname}} fail_timeout=10s;
 }
 
 add_header X-Upstream $upstream_addr always;
