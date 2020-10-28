@@ -1,9 +1,9 @@
 [Wordpress_VMs]
 
-ec2-54-220-202-139.eu-west-1.compute.amazonaws.com
-ec2-3-251-73-62.eu-west-1.compute.amazonaws.com
+VM1
+VM2
 
 
 [Loadbalancer]
 
-ec2-54-247-61-192.eu-west-1.compute.amazonaws.com
+LB1
